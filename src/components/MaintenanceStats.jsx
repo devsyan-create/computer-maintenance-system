@@ -271,6 +271,7 @@ export function MaintenanceStats() {
       rowSelection,
       columnSizing,
     },
+    enableColumnResizing: true,
     columnResizeMode: 'onChange',
     onGlobalFilterChange: setGlobalFilter,
     onColumnFiltersChange: setTableFilters,

@@ -363,6 +363,7 @@ export function AssetsTable() {
       columnOrder,
       columnSizing,
     },
+    enableColumnResizing: true,
     columnResizeMode: 'onChange',
     onGlobalFilterChange: setGlobalFilter,
     onColumnFiltersChange: setTableFilters,
