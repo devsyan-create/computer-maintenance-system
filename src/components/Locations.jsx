@@ -1,9 +1,9 @@
-import { useState, useMemo, useRef, useEffect } from 'react'
+import { useState, useMemo, useRef, useEffect, forwardRef } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Plus, Edit, Trash2, MapPin, Eye, Search, MoreVertical, Palette, GripVertical } from 'lucide-react'
 import { toast } from 'sonner'
 import { motion, AnimatePresence } from 'framer-motion'
-import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors } from '@dnd-kit/core'
+import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragOverlay, defaultDropAnimationSideEffects } from '@dnd-kit/core'
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, rectSortingStrategy, useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { locationsAPI, assetsAPI } from '@/services/api'
@@ -25,23 +25,7 @@ const COLORS = [
   { class: 'bg-slate-500', text: 'text-slate-500', border: 'border-slate-500', bgLight: 'bg-slate-500/10' },
 ]
 
-function SortableLocationCard({ location, assetCount, onEdit, onDelete, onView, onColorChange }) {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ id: location.id })
-
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    zIndex: isDragging ? 10 : 1,
-    opacity: isDragging ? 0.8 : 1,
-  }
-
+const LocationCardContent = forwardRef(({ location, assetCount, onEdit, onDelete, onView, onColorChange, dragHandleProps, isDragging, isOverlay, style }, ref) => {
   const [showMenu, setShowMenu] = useState(false)
   const [showColors, setShowColors] = useState(false)
   const menuRef = useRef(null)
@@ -60,7 +44,7 @@ function SortableLocationCard({ location, assetCount, onEdit, onDelete, onView, 
   const selectedColor = COLORS.find(c => c.class === location.color) || COLORS[0]
 
   return (
-    <div ref={setNodeRef} style={style} className="h-full relative">
+    <div ref={ref} style={style} className={`h-full relative ${showMenu ? 'z-20' : 'z-0'} ${isDragging ? 'opacity-40 grayscale z-0' : ''} ${isOverlay ? 'scale-105 shadow-2xl rotate-2 z-50 cursor-grabbing' : ''}`}>
       <Card className={`cursor-pointer hover:shadow-md transition-all h-full relative overflow-visible border-t-4 ${selectedColor.border}`} onClick={() => onView(location)}>
         <CardContent className="p-4 flex flex-col h-full">
           <div className="flex items-start justify-between mb-3 gap-2">
@@ -74,7 +58,7 @@ function SortableLocationCard({ location, assetCount, onEdit, onDelete, onView, 
               </div>
             </div>
             <div className="flex gap-1 shrink-0 relative" ref={menuRef} onClick={(e) => e.stopPropagation()}>
-              <div {...attributes} {...listeners} className="cursor-grab hover:bg-muted p-2 rounded-md flex items-center justify-center -ml-2">
+              <div {...dragHandleProps} className={`cursor-grab hover:bg-muted p-2 rounded-md flex items-center justify-center -ml-2 ${isOverlay ? 'cursor-grabbing' : ''}`}>
                 <GripVertical className="h-5 w-5 text-muted-foreground/50 hover:text-foreground transition-colors" />
               </div>
               <Button variant="ghost" size="icon" onClick={() => { setShowMenu(!showMenu); setShowColors(false) }}>
@@ -132,6 +116,32 @@ function SortableLocationCard({ location, assetCount, onEdit, onDelete, onView, 
       </Card>
     </div>
   )
+})
+
+function SortableLocationCard(props) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: props.location.id })
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  }
+
+  return (
+    <LocationCardContent
+      ref={setNodeRef}
+      style={style}
+      isDragging={isDragging}
+      dragHandleProps={{ ...attributes, ...listeners }}
+      {...props}
+    />
+  )
 }
 
 export function Locations() {
@@ -143,6 +153,7 @@ export function Locations() {
   const [searchQuery, setSearchQuery] = useState('')
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
   const [deleteLocationId, setDeleteLocationId] = useState(null)
+  const [activeId, setActiveId] = useState(null)
 
   const { data: locations = [], isLoading } = useQuery({
     queryKey: ['locations'],
@@ -213,6 +224,38 @@ export function Locations() {
     },
   })
 
+  const reorderMutation = useMutation({
+    mutationFn: async (updates) => {
+      const promises = updates.map(update => locationsAPI.update(update.id, { order: update.order }))
+      await Promise.all(promises)
+    },
+    onMutate: async (updates) => {
+      await queryClient.cancelQueries(['locations'])
+      const previousLocations = queryClient.getQueryData(['locations'])
+      
+      queryClient.setQueryData(['locations'], old => {
+        if (!old) return old
+        const newLocations = [...old]
+        updates.forEach(update => {
+          const index = newLocations.findIndex(l => l.id === update.id)
+          if (index !== -1) {
+            newLocations[index] = { ...newLocations[index], order: update.order }
+          }
+        })
+        return newLocations
+      })
+      
+      return { previousLocations }
+    },
+    onError: (err, newTodo, context) => {
+      queryClient.setQueryData(['locations'], context.previousLocations)
+      toast.error('هەڵەیەک ڕوویدا لە کاتی گۆڕینی ڕیزبەندی')
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries(['locations'])
+    }
+  })
+
   const handleSubmit = (e) => {
     e.preventDefault()
     if (editingLocation) {
@@ -237,7 +280,16 @@ export function Locations() {
     })
   )
 
+  const handleDragStart = (event) => {
+    setActiveId(event.active.id)
+  }
+
+  const handleDragCancel = () => {
+    setActiveId(null)
+  }
+
   const handleDragEnd = (event) => {
+    setActiveId(null)
     const { active, over } = event
 
     if (over && active.id !== over.id) {
@@ -246,13 +298,31 @@ export function Locations() {
 
       const newOrder = arrayMove(locationsWithCount, oldIndex, newIndex)
       
-      // Batch the order updates
-      newOrder.forEach((loc, index) => {
-        if ((loc.order ?? -1) !== index) {
-          updateMutation.mutate({ id: loc.id, data: { order: index } })
-        }
-      })
+      const updates = newOrder
+        .map((loc, index) => {
+          if ((loc.order ?? -1) !== index) {
+            return { id: loc.id, order: index }
+          }
+          return null
+        })
+        .filter(Boolean)
+
+      if (updates.length > 0) {
+        reorderMutation.mutate(updates)
+      }
     }
+  }
+
+  const activeLocation = activeId ? locationsWithCount.find(l => l.id === activeId) : null
+
+  const dropAnimationConfig = {
+    sideEffects: defaultDropAnimationSideEffects({
+      styles: {
+        active: {
+          opacity: '0.4',
+        },
+      },
+    }),
   }
 
   const handleEdit = (location) => {
@@ -341,7 +411,9 @@ export function Locations() {
         <DndContext 
           sensors={sensors}
           collisionDetection={closestCenter}
+          onDragStart={handleDragStart}
           onDragEnd={handleDragEnd}
+          onDragCancel={handleDragCancel}
         >
           <SortableContext 
             items={filteredLocations.map(l => l.id)}
@@ -361,6 +433,21 @@ export function Locations() {
               ))}
             </div>
           </SortableContext>
+
+          <DragOverlay dropAnimation={dropAnimationConfig}>
+            {activeLocation ? (
+              <LocationCardContent
+                location={activeLocation}
+                assetCount={activeLocation.assetCount}
+                isOverlay
+                dragHandleProps={{}}
+                onView={() => {}}
+                onEdit={() => {}}
+                onDelete={() => {}}
+                onColorChange={() => {}}
+              />
+            ) : null}
+          </DragOverlay>
         </DndContext>
       ) : (
         <Card>

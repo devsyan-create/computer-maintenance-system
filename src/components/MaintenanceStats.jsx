@@ -5,6 +5,8 @@ import {
   getCoreRowModel,
   getFilteredRowModel,
   getSortedRowModel,
+  getFacetedRowModel,
+  getFacetedUniqueValues,
   flexRender,
 } from '@tanstack/react-table'
 import {
@@ -33,6 +35,11 @@ import { Card, CardContent } from '@/components/ui/Card'
 import { MaintenanceFormDialog } from './MaintenanceFormDialog'
 import { ConfirmDialog } from './ConfirmDialog'
 import { cn } from '@/lib/utils'
+import { DataTableFilterPopover } from '@/components/ui/data-table/DataTableFilterPopover'
+import { DataTableFilterChips } from '@/components/ui/data-table/DataTableFilterChips'
+import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger } from '@/components/ui/ContextMenu'
+import { useFilterStore } from '@/store/useFilterStore'
+import { enterpriseFilterFn } from '@/lib/filterEngine'
 
 const MONTHS = [
   'مانگی یەک',
@@ -49,11 +56,20 @@ const MONTHS = [
   'مانگی دوازدە',
 ]
 
+const EMPTY_ARRAY = []
+
 export function MaintenanceStats() {
   const queryClient = useQueryClient()
   const [globalFilter, setGlobalFilter] = useState('')
-  const [sorting, setSorting] = useState([])
   const [rowSelection, setRowSelection] = useState({})
+  
+  // Enterprise Filter State
+  const tableFilters = useFilterStore(state => state.tableFilters['maintenance'] || EMPTY_ARRAY)
+  const setTableFilters = (updater) => useFilterStore.getState().setColumnFilters('maintenance', updater)
+  
+  const tableSorting = useFilterStore(state => state.tableSorting['maintenance'] || EMPTY_ARRAY)
+  const setTableSorting = (updater) => useFilterStore.getState().setColumnSorting('maintenance', updater)
+  
   const [editingRecord, setEditingRecord] = useState(null)
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
@@ -61,7 +77,7 @@ export function MaintenanceStats() {
   const [selectedYear, setSelectedYear] = useState(`${new Date().getFullYear()}`)
   const [selectedMonth, setSelectedMonth] = useState(null) // null means overview mode
 
-  const { data: records = [], isLoading } = useQuery({
+  const { data: records = EMPTY_ARRAY, isLoading } = useQuery({
     queryKey: ['maintenance'],
     queryFn: maintenanceAPI.getAll,
   })
@@ -93,6 +109,7 @@ export function MaintenanceStats() {
     () => [
       {
         id: 'select',
+        enableColumnFilter: false,
         header: ({ table }) => (
           <Checkbox
             checked={table.getIsAllRowsSelected()}
@@ -114,38 +131,46 @@ export function MaintenanceStats() {
       },
       {
         id: 'rowNumber',
+        enableColumnFilter: false,
         header: 'ژ',
         cell: ({ row }) => <span>{row.index + 1}</span>,
       },
       {
         accessorKey: 'year',
         header: 'ساڵ',
+        filterFn: enterpriseFilterFn,
       },
       {
         accessorKey: 'month',
         header: 'مانگ',
+        filterFn: enterpriseFilterFn,
         cell: ({ row }) => MONTHS[Number(row.original.month || 1) - 1] || '-',
       },
       {
         accessorKey: 'location',
         header: 'شوێن',
+        filterFn: enterpriseFilterFn,
       },
       {
         accessorKey: 'department',
         header: 'بەش-هۆبە',
+        filterFn: enterpriseFilterFn,
       },
       {
         accessorKey: 'maintenanceType',
         header: 'جۆری کاری چاککردنەوە',
+        filterFn: enterpriseFilterFn,
       },
       {
         accessorKey: 'cost',
         header: 'تێچوون',
+        filterFn: enterpriseFilterFn,
         cell: ({ row }) => row.original.cost || '-',
       },
       {
         accessorKey: 'locationAndType',
         header: 'شوێن و جۆری کار',
+        filterFn: enterpriseFilterFn,
         cell: ({ row }) => (
           <div className="text-sm">
             <div className="font-medium">{row.original.location}</div>
@@ -156,10 +181,12 @@ export function MaintenanceStats() {
       {
         accessorKey: 'details',
         header: 'وردەکاری',
+        filterFn: enterpriseFilterFn,
       },
       {
         id: 'actions',
         header: 'کردارەکان',
+        enableColumnFilter: false,
         cell: ({ row }) => (
           <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
             <Button
@@ -236,15 +263,19 @@ export function MaintenanceStats() {
     columns,
     state: {
       globalFilter,
-      sorting,
+      columnFilters: tableFilters,
+      sorting: tableSorting,
       rowSelection,
     },
     onGlobalFilterChange: setGlobalFilter,
-    onSortingChange: setSorting,
+    onColumnFiltersChange: setTableFilters,
+    onSortingChange: setTableSorting,
     onRowSelectionChange: setRowSelection,
     getCoreRowModel: getCoreRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     getSortedRowModel: getSortedRowModel(),
+    getFacetedRowModel: getFacetedRowModel(),
+    getFacetedUniqueValues: getFacetedUniqueValues(),
   })
 
   const selectedRows = table.getSelectedRowModel().rows
@@ -385,58 +416,104 @@ export function MaintenanceStats() {
 
       {/* Table - Only show when a month is selected */}
       {selectedMonth !== null && (
-        <ScrollArea className="flex-1">
-          <div className="max-w-none">
-            <table className="w-full">
-              <thead className="bg-card sticky top-0 z-10 border-b">
-                {table.getHeaderGroups().map((headerGroup) => (
-                  <tr key={headerGroup.id}>
-                    {headerGroup.headers.map((header) => (
-                      <th
-                        key={header.id}
-                        className="px-4 py-3 text-right text-sm font-medium border-b"
-                      >
-                        {header.isPlaceholder ? null : (
-                          <div
-                            className={cn(
-                              'flex items-center gap-2',
-                              header.column.getCanSort() && 'cursor-pointer select-none'
-                            )}
-                            onClick={header.column.getToggleSortingHandler()}
-                          >
-                            {flexRender(
-                              header.column.columnDef.header,
-                              header.getContext()
-                            )}
-                            {header.column.getIsSorted() === 'asc' && (
-                              <ChevronUp className="h-4 w-4" />
-                            )}
-                            {header.column.getIsSorted() === 'desc' && (
-                              <ChevronDown className="h-4 w-4" />
-                            )}
-                          </div>
-                        )}
-                      </th>
-                    ))}
-                  </tr>
-                ))}
-              </thead>
-              <tbody>
-                {table.getRowModel().rows.map((row) => (
-                  <tr
-                    key={row.id}
-                    className="border-b hover:bg-muted/50 transition-colors cursor-pointer"
-                    onClick={() => row.toggleSelected()}
-                  >
-                    {row.getVisibleCells().map((cell) => (
-                      <td key={cell.id} className="px-4 py-3 text-sm">
-                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                      </td>
-                    ))}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+        <div className="flex-1 flex flex-col min-h-0">
+          <DataTableFilterChips table={table} />
+          <ScrollArea className="flex-1">
+            <div className="max-w-none">
+              <table className="w-full">
+                <thead className="bg-card sticky top-0 z-10 border-b">
+                  {table.getHeaderGroups().map((headerGroup) => (
+                    <tr key={headerGroup.id}>
+                      {headerGroup.headers.map((header) => (
+                        <th
+                          key={header.id}
+                          className="px-4 py-3 text-right text-sm font-medium border-b"
+                        >
+                          {header.isPlaceholder ? null : (
+                            <div className="flex items-center gap-1 justify-end w-full">
+                              <div
+                                className={cn(
+                                  'flex items-center gap-2 cursor-pointer select-none'
+                                )}
+                                onClick={header.column.getCanSort() ? header.column.getToggleSortingHandler() : undefined}
+                              >
+                                {flexRender(
+                                  header.column.columnDef.header,
+                                  header.getContext()
+                                )}
+                                {header.column.getIsSorted() === 'asc' && (
+                                  <ChevronUp className="h-3.5 w-3.5" />
+                                )}
+                                {header.column.getIsSorted() === 'desc' && (
+                                  <ChevronDown className="h-3.5 w-3.5" />
+                                )}
+                              </div>
+                              {header.column.getCanFilter() && (
+                                <DataTableFilterPopover column={header.column} />
+                              )}
+                            </div>
+                          )}
+                        </th>
+                      ))}
+                    </tr>
+                  ))}
+                </thead>
+                <tbody>
+                  {table.getRowModel().rows.map((row) => (
+                    <tr
+                      key={row.id}
+                      className="border-b hover:bg-muted/50 transition-colors cursor-pointer"
+                      onClick={() => row.toggleSelected()}
+                    >
+                      {row.getVisibleCells().map((cell) => {
+                        const value = cell.getValue()
+                        return (
+                          <ContextMenu key={cell.id}>
+                            <ContextMenuTrigger asChild>
+                              <td className="px-4 py-3 text-sm">
+                                {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                              </td>
+                            </ContextMenuTrigger>
+                            <ContextMenuContent>
+                              <ContextMenuItem 
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  if (value !== undefined && cell.column.getCanFilter()) {
+                                    cell.column.setFilterValue({ facetedValues: [String(value ?? '')], conditions: [] })
+                                  }
+                                }}
+                              >
+                                پاڵاوتن بەم بەهایە
+                              </ContextMenuItem>
+                              <ContextMenuItem 
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  if (value !== undefined && cell.column.getCanFilter()) {
+                                    cell.column.setFilterValue({ 
+                                      facetedValues: [], 
+                                      conditions: [{ operator: 'notEquals', value: String(value ?? '') }] 
+                                    })
+                                  }
+                                }}
+                              >
+                                دەرکردنی ئەم بەهایە
+                              </ContextMenuItem>
+                              <ContextMenuItem 
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  cell.column.setFilterValue(undefined)
+                                }}
+                              >
+                                سڕینەوەی پاڵاوتن
+                              </ContextMenuItem>
+                            </ContextMenuContent>
+                          </ContextMenu>
+                        )
+                      })}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
 
             {!isLoading && filteredRecords.length === 0 && (
               <div className="text-center py-12 text-muted-foreground">
@@ -446,6 +523,7 @@ export function MaintenanceStats() {
             )}
           </div>
         </ScrollArea>
+        </div>
       )}
 
       {/* Dialogs */}

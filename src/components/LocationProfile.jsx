@@ -5,6 +5,8 @@ import {
   getCoreRowModel,
   getFilteredRowModel,
   getSortedRowModel,
+  getFacetedRowModel,
+  getFacetedUniqueValues,
   flexRender,
 } from '@tanstack/react-table'
 import {
@@ -39,6 +41,11 @@ import { AssetFormDialog } from './AssetFormDialog'
 import { TransferDialog } from './TransferDialog'
 import { ConfirmDialog } from './ConfirmDialog'
 import { cn } from '@/lib/utils'
+import { DataTableFilterPopover } from '@/components/ui/data-table/DataTableFilterPopover'
+import { DataTableFilterChips } from '@/components/ui/data-table/DataTableFilterChips'
+import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger } from '@/components/ui/ContextMenu'
+import { useFilterStore } from '@/store/useFilterStore'
+import { enterpriseFilterFn } from '@/lib/filterEngine'
 
 function ColumnVisibilityMenu({ table }) {
   const [open, setOpen] = useState(false)
@@ -148,11 +155,19 @@ function TableSkeleton() {
   )
 }
 
+const EMPTY_ARRAY = []
+
 export function LocationProfile({ location, onBack }) {
   const queryClient = useQueryClient()
   const [globalFilter, setGlobalFilter] = useState('')
-  const [sorting, setSorting] = useState([])
   const [rowSelection, setRowSelection] = useState({})
+  
+  // Enterprise Filter State
+  const tableFilters = useFilterStore(state => state.tableFilters['location-profile'] || EMPTY_ARRAY)
+  const setTableFilters = (updater) => useFilterStore.getState().setColumnFilters('location-profile', updater)
+  
+  const tableSorting = useFilterStore(state => state.tableSorting['location-profile'] || EMPTY_ARRAY)
+  const setTableSorting = (updater) => useFilterStore.getState().setColumnSorting('location-profile', updater)
   const [editingAsset, setEditingAsset] = useState(null)
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [isTransferOpen, setIsTransferOpen] = useState(false)
@@ -164,7 +179,7 @@ export function LocationProfile({ location, onBack }) {
   const columnOrder = useUIStore((state) => state.columnOrder)
   const setColumnOrder = useUIStore((state) => state.setColumnOrder)
 
-  const { data: allAssets = [], isLoading } = useQuery({
+  const { data: allAssets = EMPTY_ARRAY, isLoading } = useQuery({
     queryKey: ['assets'],
     queryFn: assetsAPI.getAll,
   })
@@ -204,6 +219,7 @@ export function LocationProfile({ location, onBack }) {
     () => [
       {
         id: 'select',
+        enableColumnFilter: false,
         header: ({ table }) => (
           <Checkbox
             checked={table.getIsAllRowsSelected()}
@@ -225,45 +241,56 @@ export function LocationProfile({ location, onBack }) {
       },
       {
         id: 'rowNumber',
+        enableColumnFilter: false,
         header: 'ژ',
         cell: ({ row }) => <span>{row.index + 1}</span>,
       },
       {
         accessorKey: 'user',
         header: 'بەکارهێنەر',
+        filterFn: enterpriseFilterFn,
       },
       {
         accessorKey: 'fullString',
         header: 'وەسفی تەواوی',
+        filterFn: enterpriseFilterFn,
         cell: ({ row }) => buildFullAssetString(row.original),
       },
       {
         accessorKey: 'category',
         header: 'جۆر',
+        filterFn: enterpriseFilterFn,
       },
       {
         accessorKey: 'brand',
         header: 'براند',
+        filterFn: enterpriseFilterFn,
       },
       {
         accessorKey: 'model',
         header: 'مۆدێل',
+        filterFn: enterpriseFilterFn,
       },
       {
         accessorKey: 'cpu',
         header: 'CPU',
+        filterFn: enterpriseFilterFn,
       },
       {
         accessorKey: 'ram',
         header: 'RAM',
+        filterFn: enterpriseFilterFn,
       },
       {
         accessorKey: 'storage',
         header: 'Storage',
+        filterFn: enterpriseFilterFn,
       },
       {
         id: 'macSerial',
         header: 'MAC/Serial',
+        filterFn: enterpriseFilterFn,
+        accessorFn: (row) => `${row.macAddress || ''} ${row.serialNumber || ''}`,
         cell: ({ row }) => (
           <div className="text-xs">
             {row.original.macAddress && <div>MAC: {row.original.macAddress}</div>}
@@ -274,10 +301,12 @@ export function LocationProfile({ location, onBack }) {
       {
         accessorKey: 'notes',
         header: 'تێبینی',
+        filterFn: enterpriseFilterFn,
       },
       {
         id: 'actions',
         header: 'کردارەکان',
+        enableColumnFilter: false,
         cell: ({ row }) => (
           <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
             <Button
@@ -314,7 +343,7 @@ export function LocationProfile({ location, onBack }) {
         ),
       },
     ],
-    [setEditingAsset, setIsFormOpen, setTransferAssets, setIsTransferOpen, deleteMutation]
+    [setEditingAsset, setIsFormOpen, setTransferAssets, setIsTransferOpen]
   )
 
   const table = useReactTable({
@@ -322,19 +351,23 @@ export function LocationProfile({ location, onBack }) {
     columns,
     state: {
       globalFilter,
-      sorting,
+      columnFilters: tableFilters,
+      sorting: tableSorting,
       rowSelection,
       columnVisibility,
       columnOrder,
     },
     onGlobalFilterChange: setGlobalFilter,
-    onSortingChange: setSorting,
+    onColumnFiltersChange: setTableFilters,
+    onSortingChange: setTableSorting,
     onRowSelectionChange: setRowSelection,
     onColumnVisibilityChange: setColumnVisibility,
     onColumnOrderChange: setColumnOrder,
     getCoreRowModel: getCoreRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     getSortedRowModel: getSortedRowModel(),
+    getFacetedRowModel: getFacetedRowModel(),
+    getFacetedUniqueValues: getFacetedUniqueValues(),
   })
 
   const selectedRows = table.getSelectedRowModel().rows
@@ -434,6 +467,7 @@ export function LocationProfile({ location, onBack }) {
       </div>
 
       {/* Table */}
+      <DataTableFilterChips table={table} />
       <ScrollArea className="flex-1">
         <div className="max-w-none">
           {isLoading ? (
@@ -451,22 +485,26 @@ export function LocationProfile({ location, onBack }) {
                         className="px-4 py-3 text-right text-sm font-medium border-b"
                       >
                         {header.isPlaceholder ? null : (
-                          <div
-                            className={cn(
-                              'flex items-center gap-2',
-                              header.column.getCanSort() && 'cursor-pointer select-none'
-                            )}
-                            onClick={header.column.getToggleSortingHandler()}
-                          >
-                            {flexRender(
-                              header.column.columnDef.header,
-                              header.getContext()
-                            )}
-                            {header.column.getIsSorted() === 'asc' && (
-                              <ChevronUp className="h-4 w-4" />
-                            )}
-                            {header.column.getIsSorted() === 'desc' && (
-                              <ChevronDown className="h-4 w-4" />
+                          <div className="flex items-center gap-1 justify-end w-full">
+                            <div
+                              className={cn(
+                                'flex items-center gap-2 cursor-pointer select-none'
+                              )}
+                              onClick={header.column.getCanSort() ? header.column.getToggleSortingHandler() : undefined}
+                            >
+                              {flexRender(
+                                header.column.columnDef.header,
+                                header.getContext()
+                              )}
+                              {header.column.getIsSorted() === 'asc' && (
+                                <ChevronUp className="h-3.5 w-3.5" />
+                              )}
+                              {header.column.getIsSorted() === 'desc' && (
+                                <ChevronDown className="h-3.5 w-3.5" />
+                              )}
+                            </div>
+                            {header.column.getCanFilter() && (
+                              <DataTableFilterPopover column={header.column} />
                             )}
                           </div>
                         )}
@@ -482,11 +520,51 @@ export function LocationProfile({ location, onBack }) {
                     className="border-b hover:bg-muted/50 transition-colors cursor-pointer"
                     onClick={() => row.toggleSelected()}
                   >
-                    {row.getVisibleCells().map((cell) => (
-                      <td key={cell.id} className="px-4 py-3 text-sm">
-                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                      </td>
-                    ))}
+                    {row.getVisibleCells().map((cell) => {
+                      const value = cell.getValue()
+                      return (
+                        <ContextMenu key={cell.id}>
+                          <ContextMenuTrigger asChild>
+                            <td className="px-4 py-3 text-sm">
+                              {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                            </td>
+                          </ContextMenuTrigger>
+                          <ContextMenuContent>
+                            <ContextMenuItem 
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                if (value !== undefined && cell.column.getCanFilter()) {
+                                  cell.column.setFilterValue({ facetedValues: [String(value ?? '')], conditions: [] })
+                                }
+                              }}
+                            >
+                              پاڵاوتن بەم بەهایە
+                            </ContextMenuItem>
+                            <ContextMenuItem 
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                if (value !== undefined && cell.column.getCanFilter()) {
+                                  cell.column.setFilterValue({ 
+                                    facetedValues: [], 
+                                    conditions: [{ operator: 'notEquals', value: String(value ?? '') }] 
+                                  })
+                                }
+                              }}
+                            >
+                              دەرکردنی ئەم بەهایە
+                            </ContextMenuItem>
+                            <ContextMenuItem 
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                cell.column.setFilterValue(undefined)
+                              }}
+                            >
+                              سڕینەوەی پاڵاوتن
+                            </ContextMenuItem>
+                          </ContextMenuContent>
+                        </ContextMenu>
+                      )
+                    })}
                   </tr>
                 ))}
               </tbody>
