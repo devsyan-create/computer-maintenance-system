@@ -82,8 +82,8 @@ function ColumnVisibilityMenu({ table }) {
       </Button>
       {open && (
         <>
-          <div 
-            className="fixed inset-0 z-40" 
+          <div
+            className="fixed inset-0 z-40"
             onClick={() => setOpen(false)}
           />
           <div className="absolute left-0 top-full mt-2 w-64 rounded-md border bg-card p-4 shadow-lg z-50">
@@ -106,8 +106,8 @@ function ColumnVisibilityMenu({ table }) {
                 {table.getAllLeafColumns().map((column) => {
                   if (column.id === 'select' || column.id === 'actions' || column.id === 'rowNumber') return null
                   return (
-                    <div 
-                      key={column.id} 
+                    <div
+                      key={column.id}
                       className="flex items-center gap-2 hover:bg-muted/50 p-1 rounded"
                       onClick={(e) => {
                         e.stopPropagation()
@@ -167,11 +167,11 @@ export function AssetsTable() {
   const queryClient = useQueryClient()
   const [globalFilter, setGlobalFilter] = useState('')
   const [rowSelection, setRowSelection] = useState({})
-  
-  // Enterprise Filter State
+
+  // Enterprise Filter State ....
   const tableFilters = useFilterStore(state => state.tableFilters['assets'] || EMPTY_ARRAY)
   const setTableFilters = (updater) => useFilterStore.getState().setColumnFilters('assets', updater)
-  
+
   const tableSorting = useFilterStore(state => state.tableSorting['assets'] || EMPTY_ARRAY)
   const setTableSorting = (updater) => useFilterStore.getState().setColumnSorting('assets', updater)
   const [editingAsset, setEditingAsset] = useState(null)
@@ -408,7 +408,7 @@ export function AssetsTable() {
               <p className="text-sm text-muted-foreground">بەڕێوەبردنی کەرەستەکان</p>
             </div>
           </div>
-          
+
           <div className="flex-1 relative">
             <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
@@ -417,7 +417,7 @@ export function AssetsTable() {
               className="pr-10"
             />
           </div>
-          
+
           <div className="flex gap-2 shrink-0">
             <Button
               variant="outline"
@@ -523,7 +523,7 @@ export function AssetsTable() {
                             </td>
                           </ContextMenuTrigger>
                           <ContextMenuContent>
-                            <ContextMenuItem 
+                            <ContextMenuItem
                               onClick={(e) => {
                                 e.stopPropagation()
                                 if (value !== undefined && cell.column.getCanFilter()) {
@@ -533,20 +533,20 @@ export function AssetsTable() {
                             >
                               پاڵاوتن بەم بەهایە
                             </ContextMenuItem>
-                            <ContextMenuItem 
+                            <ContextMenuItem
                               onClick={(e) => {
                                 e.stopPropagation()
                                 if (value !== undefined && cell.column.getCanFilter()) {
-                                  cell.column.setFilterValue({ 
-                                    facetedValues: [], 
-                                    conditions: [{ operator: 'notEquals', value: String(value ?? '') }] 
+                                  cell.column.setFilterValue({
+                                    facetedValues: [],
+                                    conditions: [{ operator: 'notEquals', value: String(value ?? '') }]
                                   })
                                 }
                               }}
                             >
                               دەرکردنی ئەم بەهایە
                             </ContextMenuItem>
-                            <ContextMenuItem 
+                            <ContextMenuItem
                               onClick={(e) => {
                                 e.stopPropagation()
                                 cell.column.setFilterValue(undefined)
@@ -617,7 +617,7 @@ export function AssetsTable() {
           }
         }}
         title={deleteTarget?.type === 'bulk' ? `سڕینەوەی ${deleteTarget.count} کەرەستە` : 'سڕینەوەی کەرەستە'}
-        message={deleteTarget?.type === 'bulk' 
+        message={deleteTarget?.type === 'bulk'
           ? `دڵنیای لە سڕینەوەی ${deleteTarget.count} کەرەستە؟ ئەم کردارە ناگەڕێتەوە.`
           : 'دڵنیای لە سڕینەوەی ئەم کەرەستەیە؟ ئەم کردارە ناگەڕێتەوە.'
         }
