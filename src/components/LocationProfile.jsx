@@ -362,6 +362,7 @@ export function LocationProfile({ location, onBack }) {
     },
     enableColumnResizing: true,
     columnResizeMode: 'onChange',
+    columnResizeDirection: 'rtl',
     onGlobalFilterChange: setGlobalFilter,
     onColumnFiltersChange: setTableFilters,
     onSortingChange: setTableSorting,

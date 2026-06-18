@@ -365,6 +365,7 @@ export function AssetsTable() {
     },
     enableColumnResizing: true,
     columnResizeMode: 'onChange',
+    columnResizeDirection: 'rtl',
     onGlobalFilterChange: setGlobalFilter,
     onColumnFiltersChange: setTableFilters,
     onSortingChange: setTableSorting,

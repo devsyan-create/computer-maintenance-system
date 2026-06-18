@@ -273,6 +273,7 @@ export function MaintenanceStats() {
     },
     enableColumnResizing: true,
     columnResizeMode: 'onChange',
+    columnResizeDirection: 'rtl',
     onGlobalFilterChange: setGlobalFilter,
     onColumnFiltersChange: setTableFilters,
     onSortingChange: setTableSorting,
