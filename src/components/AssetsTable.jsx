@@ -511,11 +511,17 @@ export function AssetsTable() {
                           <div
                             onMouseDown={header.getResizeHandler()}
                             onTouchStart={header.getResizeHandler()}
+                            onDoubleClick={() => header.column.resetSize()}
                             className={cn(
-                              "absolute top-0 left-0 h-full w-1.5 cursor-col-resize user-select-none touch-none bg-border/50 hover:bg-primary opacity-0 group-hover:opacity-100 transition-opacity z-20",
-                              header.column.getIsResizing() && "bg-primary opacity-100"
+                              "absolute top-0 -left-2 w-4 h-full cursor-col-resize z-20 flex justify-center touch-none select-none",
+                              header.column.getIsResizing() && "is-resizing"
                             )}
-                          />
+                          >
+                            <div className={cn(
+                              "h-full w-[2px] transition-colors duration-200",
+                              header.column.getIsResizing() ? "bg-primary" : "bg-transparent group-hover:bg-border/50 hover:!bg-primary"
+                            )} />
+                          </div>
                         )}
                       </th>
                     ))}
