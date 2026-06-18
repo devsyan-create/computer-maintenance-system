@@ -539,46 +539,48 @@ export function AssetsTable() {
                     {row.getVisibleCells().map((cell) => {
                       const value = cell.getValue()
                       return (
-                        <ContextMenu key={cell.id}>
-                          <ContextMenuTrigger asChild>
-                            <td className="px-4 py-3 text-sm">
-                              {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                            </td>
-                          </ContextMenuTrigger>
-                          <ContextMenuContent>
-                            <ContextMenuItem
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                if (value !== undefined && cell.column.getCanFilter()) {
-                                  cell.column.setFilterValue({ facetedValues: [String(value ?? '')], conditions: [] })
-                                }
-                              }}
-                            >
-                              پاڵاوتن بەم بەهایە
-                            </ContextMenuItem>
-                            <ContextMenuItem
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                if (value !== undefined && cell.column.getCanFilter()) {
-                                  cell.column.setFilterValue({
-                                    facetedValues: [],
-                                    conditions: [{ operator: 'notEquals', value: String(value ?? '') }]
-                                  })
-                                }
-                              }}
-                            >
-                              دەرکردنی ئەم بەهایە
-                            </ContextMenuItem>
-                            <ContextMenuItem
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                cell.column.setFilterValue(undefined)
-                              }}
-                            >
-                              سڕینەوەی پاڵاوتن
-                            </ContextMenuItem>
-                          </ContextMenuContent>
-                        </ContextMenu>
+                        <td key={cell.id} className="px-4 py-3 text-sm" style={{ width: cell.column.getSize() }}>
+                          <ContextMenu>
+                            <ContextMenuTrigger asChild>
+                              <div className="w-full h-full min-h-[1.5rem]">
+                                {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                              </div>
+                            </ContextMenuTrigger>
+                            <ContextMenuContent>
+                              <ContextMenuItem
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  if (value !== undefined && cell.column.getCanFilter()) {
+                                    cell.column.setFilterValue({ facetedValues: [String(value ?? '')], conditions: [] })
+                                  }
+                                }}
+                              >
+                                پاڵاوتن بەم بەهایە
+                              </ContextMenuItem>
+                              <ContextMenuItem
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  if (value !== undefined && cell.column.getCanFilter()) {
+                                    cell.column.setFilterValue({
+                                      facetedValues: [],
+                                      conditions: [{ operator: 'notEquals', value: String(value ?? '') }]
+                                    })
+                                  }
+                                }}
+                              >
+                                دەرکردنی ئەم بەهایە
+                              </ContextMenuItem>
+                              <ContextMenuItem
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  cell.column.setFilterValue(undefined)
+                                }}
+                              >
+                                سڕینەوەی پاڵاوتن
+                              </ContextMenuItem>
+                            </ContextMenuContent>
+                          </ContextMenu>
+                        </td>
                       )
                     })}
                   </tr>
