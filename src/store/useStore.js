@@ -30,6 +30,7 @@ export const useUIStore = create(
       sidebarMode: 'full', // 'full' | 'icon' | 'hidden'
       columnVisibility: {},
       columnOrder: [],
+      columnSizing: {},
       setSidebarMode: (mode) => set({ sidebarMode: mode }),
       setColumnVisibility: (updater) =>
         set((state) => ({
@@ -40,7 +41,11 @@ export const useUIStore = create(
         set((state) => ({
           columnOrder: typeof updater === 'function' ? updater(state.columnOrder) : updater,
         })),
-      resetTableSettings: () => set({ columnVisibility: {}, columnOrder: [] }),
+      setColumnSizing: (updater) =>
+        set((state) => ({
+          columnSizing: typeof updater === 'function' ? updater(state.columnSizing) : updater,
+        })),
+      resetTableSettings: () => set({ columnVisibility: {}, columnOrder: [], columnSizing: {} }),
     }),
     {
       name: 'ui-storage',

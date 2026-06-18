@@ -184,6 +184,8 @@ export function AssetsTable() {
   const setColumnVisibility = useUIStore((state) => state.setColumnVisibility)
   const columnOrder = useUIStore((state) => state.columnOrder)
   const setColumnOrder = useUIStore((state) => state.setColumnOrder)
+  const columnSizing = useUIStore((state) => state.columnSizing)
+  const setColumnSizing = useUIStore((state) => state.setColumnSizing)
 
   const { data: assets = EMPTY_ARRAY, isLoading } = useQuery({
     queryKey: ['assets'],
@@ -359,13 +361,16 @@ export function AssetsTable() {
       rowSelection,
       columnVisibility,
       columnOrder,
+      columnSizing,
     },
+    columnResizeMode: 'onChange',
     onGlobalFilterChange: setGlobalFilter,
     onColumnFiltersChange: setTableFilters,
     onSortingChange: setTableSorting,
     onRowSelectionChange: setRowSelection,
     onColumnVisibilityChange: setColumnVisibility,
     onColumnOrderChange: setColumnOrder,
+    onColumnSizingChange: setColumnSizing,
     getCoreRowModel: getCoreRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     getSortedRowModel: getSortedRowModel(),
@@ -468,14 +473,15 @@ export function AssetsTable() {
               <TableSkeleton />
             </div>
           ) : (
-            <table className="w-full">
+            <table className="w-full" style={{ tableLayout: 'fixed', minWidth: '100%', width: table.getTotalSize() }}>
               <thead className="bg-card sticky top-0 z-10 border-b">
                 {table.getHeaderGroups().map((headerGroup) => (
                   <tr key={headerGroup.id}>
                     {headerGroup.headers.map((header) => (
                       <th
                         key={header.id}
-                        className="px-4 py-3 text-right text-sm font-medium border-b"
+                        className="px-4 py-3 text-right text-sm font-medium border-b relative group"
+                        style={{ width: header.getSize() }}
                       >
                         {header.isPlaceholder ? null : (
                           <div className="flex items-center gap-1 justify-end w-full">
@@ -500,6 +506,16 @@ export function AssetsTable() {
                               <DataTableFilterPopover column={header.column} />
                             )}
                           </div>
+                        )}
+                        {header.column.getCanResize() && (
+                          <div
+                            onMouseDown={header.getResizeHandler()}
+                            onTouchStart={header.getResizeHandler()}
+                            className={cn(
+                              "absolute top-0 left-0 h-full w-1.5 cursor-col-resize user-select-none touch-none bg-border/50 hover:bg-primary opacity-0 group-hover:opacity-100 transition-opacity z-20",
+                              header.column.getIsResizing() && "bg-primary opacity-100"
+                            )}
+                          />
                         )}
                       </th>
                     ))}

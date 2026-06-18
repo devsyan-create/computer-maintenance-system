@@ -70,6 +70,9 @@ export function MaintenanceStats() {
   const tableSorting = useFilterStore(state => state.tableSorting['maintenance'] || EMPTY_ARRAY)
   const setTableSorting = (updater) => useFilterStore.getState().setColumnSorting('maintenance', updater)
   
+  const columnSizing = useUIStore((state) => state.columnSizing)
+  const setColumnSizing = useUIStore((state) => state.setColumnSizing)
+  
   const [editingRecord, setEditingRecord] = useState(null)
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
@@ -266,11 +269,14 @@ export function MaintenanceStats() {
       columnFilters: tableFilters,
       sorting: tableSorting,
       rowSelection,
+      columnSizing,
     },
+    columnResizeMode: 'onChange',
     onGlobalFilterChange: setGlobalFilter,
     onColumnFiltersChange: setTableFilters,
     onSortingChange: setTableSorting,
     onRowSelectionChange: setRowSelection,
+    onColumnSizingChange: setColumnSizing,
     getCoreRowModel: getCoreRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     getSortedRowModel: getSortedRowModel(),
@@ -420,16 +426,17 @@ export function MaintenanceStats() {
           <DataTableFilterChips table={table} />
           <ScrollArea className="flex-1">
             <div className="max-w-none">
-              <table className="w-full">
+              <table className="w-full" style={{ tableLayout: 'fixed', minWidth: '100%', width: table.getTotalSize() }}>
                 <thead className="bg-card sticky top-0 z-10 border-b">
                   {table.getHeaderGroups().map((headerGroup) => (
                     <tr key={headerGroup.id}>
                       {headerGroup.headers.map((header) => (
-                        <th
-                          key={header.id}
-                          className="px-4 py-3 text-right text-sm font-medium border-b"
-                        >
-                          {header.isPlaceholder ? null : (
+                          <th
+                            key={header.id}
+                            className="px-4 py-3 text-right text-sm font-medium border-b relative group"
+                            style={{ width: header.getSize() }}
+                          >
+                            {header.isPlaceholder ? null : (
                             <div className="flex items-center gap-1 justify-end w-full">
                               <div
                                 className={cn(
@@ -448,12 +455,22 @@ export function MaintenanceStats() {
                                   <ChevronDown className="h-3.5 w-3.5" />
                                 )}
                               </div>
-                              {header.column.getCanFilter() && (
-                                <DataTableFilterPopover column={header.column} />
-                              )}
-                            </div>
-                          )}
-                        </th>
+                                {header.column.getCanFilter() && (
+                                  <DataTableFilterPopover column={header.column} />
+                                )}
+                              </div>
+                            )}
+                            {header.column.getCanResize() && (
+                              <div
+                                onMouseDown={header.getResizeHandler()}
+                                onTouchStart={header.getResizeHandler()}
+                                className={cn(
+                                  "absolute top-0 left-0 h-full w-1.5 cursor-col-resize user-select-none touch-none bg-border/50 hover:bg-primary opacity-0 group-hover:opacity-100 transition-opacity z-20",
+                                  header.column.getIsResizing() && "bg-primary opacity-100"
+                                )}
+                              />
+                            )}
+                          </th>
                       ))}
                     </tr>
                   ))}
