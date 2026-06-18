@@ -1,0 +1,12 @@
+{
+  "rules": {
+    "logs": {
+      ".read": "auth != null && (auth.token.email == 'dler@syana.com' || auth.token.email == 'imad@syana.com' || auth.token.email == 'azher@syana.com')",
+      ".write": "auth != null && (auth.token.email == 'dler@syana.com' || auth.token.email == 'imad@syana.com' || auth.token.email == 'azher@syana.com')",
+      ".indexOn": ["timestamp", "userEmail", "module"],
+      "$logId": {
+        ".validate": "newData.hasChildren(['action', 'module', 'userEmail', 'userName', 'timestamp'])"
+      }
+    }
+  }
+}

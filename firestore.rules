@@ -1,0 +1,87 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helper function to check if user is authorized
+    function isAuthorized() {
+      return request.auth != null && 
+             request.auth.token.email in [
+               'dler@syana.com',
+               'imad@syana.com',
+               'azher@syana.com'
+             ];
+    }
+    
+    // Assets collection
+    match /assets/{assetId} {
+      allow read: if isAuthorized();
+      allow create: if isAuthorized() &&
+                    request.resource.data.keys().hasAll(['location']) &&
+                    request.resource.data.location is string;
+      allow update: if isAuthorized() &&
+                    (!request.resource.data.keys().hasAny(['location']) || request.resource.data.location is string);
+      allow delete: if isAuthorized();
+    }
+    
+    // Locations collection
+    match /locations/{locationId} {
+      allow read: if isAuthorized();
+      allow create: if isAuthorized() &&
+                    request.resource.data.keys().hasAll(['name']) &&
+                    request.resource.data.name is string &&
+                    (!request.resource.data.keys().hasAny(['color']) || request.resource.data.color is string) &&
+                    (!request.resource.data.keys().hasAny(['order']) || request.resource.data.order is number);
+      allow update: if isAuthorized() &&
+                    (!request.resource.data.keys().hasAny(['name']) || request.resource.data.name is string) &&
+                    (!request.resource.data.keys().hasAny(['color']) || request.resource.data.color is string) &&
+                    (!request.resource.data.keys().hasAny(['order']) || request.resource.data.order is number);
+      allow delete: if isAuthorized();
+    }
+    
+    // Transfers collection
+    match /transfers/{transferId} {
+      allow read: if isAuthorized();
+      allow create: if isAuthorized() &&
+                    request.resource.data.keys().hasAll(['assetId', 'fromLocation', 'toLocation']) &&
+                    request.resource.data.assetId is string &&
+                    request.resource.data.fromLocation is string &&
+                    request.resource.data.toLocation is string;
+      allow update, delete: if isAuthorized();
+    }
+    
+    // Maintenance collection
+    match /maintenance/{maintenanceId} {
+      allow read, write: if isAuthorized();
+    }
+    
+    // Settings collections
+    match /categories/{categoryId} {
+      allow read, write: if isAuthorized();
+    }
+    
+    match /brands/{brandId} {
+      allow read, write: if isAuthorized();
+    }
+    
+    match /maintenanceTypes/{typeId} {
+      allow read, write: if isAuthorized();
+    }
+    
+    match /maintenanceLocations/{locationId} {
+      allow read, write: if isAuthorized();
+    }
+    
+    // Counters collection for serial number generation
+    match /counters/{counterId} {
+      allow read, write: if isAuthorized();
+    }
+    
+    // Logs collection
+    match /logs/{logId} {
+      allow read: if isAuthorized();
+      allow create: if isAuthorized();
+      // No update or delete - logs are immutable
+    }
+  }
+}

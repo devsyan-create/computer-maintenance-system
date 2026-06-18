@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Firestore Data Check</title>
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+        import { getAuth, signInWithEmailAndPassword } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
+        import { getFirestore, collection, getDocs } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyDAX5WbGYqz6ASWQ7QqrAYJgZqHb_LO9LM",
+            authDomain: "computer-syana.firebaseapp.com",
+            projectId: "computer-syana",
+            storageBucket: "computer-syana.firebasestorage.app",
+            messagingSenderId: "110153829555",
+            appId: "1:110153829555:web:1a970060724c30d01b74c6",
+            databaseURL: "https://computer-syana-default-rtdb.firebaseio.com"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        async function checkData() {
+            const output = document.getElementById('output');
+            
+            try {
+                output.innerHTML += '<h3>🔐 Login first...</h3>';
+                output.innerHTML += '<p>Email: <input type="email" id="email" value="azher@syana.com"></p>';
+                output.innerHTML += '<p>Password: <input type="password" id="password"></p>';
+                output.innerHTML += '<button onclick="doLogin()">Login & Check</button>';
+                
+                window.doLogin = async function() {
+                    const email = document.getElementById('email').value;
+                    const password = document.getElementById('password').value;
+                    
+                    try {
+                        output.innerHTML = '<h3>🔐 Logging in...</h3>';
+                        await signInWithEmailAndPassword(auth, email, password);
+                        output.innerHTML += '<p>✅ Logged in successfully!</p>';
+                        
+                        await new Promise(resolve => setTimeout(resolve, 1000));
+                        
+                        output.innerHTML += '<h3>📊 Checking Firestore data...</h3>';
+                        
+                        // Check categories
+                        const categoriesSnap = await getDocs(collection(db, 'categories'));
+                        output.innerHTML += `<p>✅ Categories: ${categoriesSnap.size} documents</p>`;
+                        categoriesSnap.forEach(doc => {
+                            output.innerHTML += `<p style="margin-left: 20px;">- ${doc.data().name}</p>`;
+                        });
+                        
+                        // Check brands
+                        const brandsSnap = await getDocs(collection(db, 'brands'));
+                        output.innerHTML += `<p>✅ Brands: ${brandsSnap.size} documents</p>`;
+                        
+                        // Check locations
+                        const locationsSnap = await getDocs(collection(db, 'locations'));
+                        output.innerHTML += `<p>✅ Locations: ${locationsSnap.size} documents</p>`;
+                        
+                        // Check assets
+                        const assetsSnap = await getDocs(collection(db, 'assets'));
+                        output.innerHTML += `<p>✅ Assets: ${assetsSnap.size} documents</p>`;
+                        
+                        if (assetsSnap.size === 0) {
+                            output.innerHTML += `<h3 style="color: red;">⚠️ No data found in Firestore!</h3>`;
+                            output.innerHTML += `<p>You need to upload the data first.</p>`;
+                        }
+                        
+                    } catch (error) {
+                        output.innerHTML += `<p style="color: red;">❌ Error: ${error.message}</p>`;
+                        console.error(error);
+                    }
+                }
+                
+            } catch (error) {
+                output.innerHTML += `<p style="color: red;">❌ Error: ${error.message}</p>`;
+                console.error(error);
+            }
+        }
+
+        window.addEventListener('load', checkData);
+    </script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            direction: rtl;
+        }
+        #output {
+            background: #f5f5f5;
+            padding: 20px;
+            border-radius: 8px;
+            min-height: 200px;
+        }
+        input {
+            padding: 8px;
+            width: 300px;
+            margin: 5px;
+        }
+        button {
+            padding: 10px 20px;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background: #45a049;
+        }
+    </style>
+</head>
+<body>
+    <h1>پشکنینی داتای Firestore</h1>
+    <div id="output"></div>
+</body>
+</html>
