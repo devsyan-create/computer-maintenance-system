@@ -481,7 +481,7 @@ export function LocationProfile({ location, onBack }) {
               <TableSkeleton />
             </div>
           ) : (
-            <table className="w-full" style={{ tableLayout: 'fixed', minWidth: '100%', width: table.getTotalSize() }}>
+            <table className="bg-card" style={{ tableLayout: 'fixed', width: table.getTotalSize() }}>
               <thead className="bg-card sticky top-0 z-10 border-b">
                 {table.getHeaderGroups().map((headerGroup) => (
                   <tr key={headerGroup.id}>
